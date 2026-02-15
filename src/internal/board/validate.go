@@ -22,23 +22,11 @@ func ValidateBoard(b *Board) error {
 	// Check for adjacent queens
 	for r := 0; r < b.Rows; r++ {
 		for c := 0; c < b.Cols; c++ {
-			cell := b.Cells[r][c]
-			for _, regionCells := range b.Regions {
-				for _, rc := range regionCells {
-					if rc.Row == r && rc.Col == c {
-						cell.HasQueen = rc.HasQueen
-						break
-					}
-				}
-				if cell.HasQueen {
-					break
-				}
-			}
-			if cell.HasQueen {
+			if b.Cells[r][c].HasQueen {
 				adjacentCells := b.Adjacency[r][c]
 				for _, adj := range adjacentCells {
 					if adj.HasQueen {
-						return errors.New("Adjacent queens found at (" + fmt.Sprint(r) + "," + fmt.Sprint(c) + ") and (" + fmt.Sprint(adj.Row) + "," + fmt.Sprint(adj.Col) + ")")
+						return errors.New("Queens at (" + fmt.Sprint(r) + "," + fmt.Sprint(c) + ") and (" + fmt.Sprint(adj.Row) + "," + fmt.Sprint(adj.Col) + ") are adjacent")
 					}
 				}
 			}

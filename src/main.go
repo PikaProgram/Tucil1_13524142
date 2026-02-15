@@ -6,11 +6,20 @@ import (
 
 func main() {
 	rawBoardData :=
-		`AAAAB
-ACCBB
-AACBB
-DDCEE
-DDCEE`
+		`ABCDEFGHIJKLM
+BCDEFGHIJKLMA
+CDEFGHIJKLMAB
+DEFGHIJKLMABC
+EFGHIJKLMABCD
+FGHIJKLMABCDE
+GHIJKLMABCDEF
+HIJKLMABCDEFG
+IJKLMABCDEFGH
+JKLMABCDEFGHI
+KLMABCDEFGHIJ
+LMABCDEFGHIJK
+MABCDEFGHIJKL
+`
 
 	boardData, err := board.ParseRawBoard(rawBoardData)
 	if err != nil {
@@ -21,6 +30,7 @@ DDCEE`
 	b, err := board.NewBoard(boardData)
 	println("Board created with dimensions:", b.Rows, "x", b.Cols)
 
+	println("Initial Board:")
 	board.DisplayBoard(b)
 
 	solvedBoard, err := board.CreateSolvedBoard(b)
@@ -29,14 +39,6 @@ DDCEE`
 		return
 	}
 
-	println()
 	println("Solved Board:")
 	board.DisplayBoard(solvedBoard)
-
-	err = board.ValidateBoard(solvedBoard)
-	if err != nil {
-		println("Board validation failed:", err.Error())
-	} else {
-		println("Board is valid!")
-	}
 }

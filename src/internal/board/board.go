@@ -26,9 +26,9 @@ func NewBoard(data [][]string) (*Board, error) {
 		return nil, errors.New("Board data cannot be empty")
 	}
 
-	if rows != cols {
-		return nil, errors.New("Board must be square (rows must equal columns)")
-	}
+	// if rows != cols {
+	// 	return nil, errors.New("Board must be square (rows must equal columns)")
+	// }
 
 	cells := make([][]*Cell, rows)
 	adjacency := make([][][]*Cell, rows)

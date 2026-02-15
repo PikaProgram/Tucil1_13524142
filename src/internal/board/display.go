@@ -6,7 +6,7 @@ func DisplayBoard(b *Board) {
 		for c := 0; c < b.Cols; c++ {
 			cell := b.Cells[r][c]
 			if cell.HasQueen {
-				print("| Q ")
+				print("| @ ")
 			} else {
 				print("| " + cell.RegionID + " ")
 			}
