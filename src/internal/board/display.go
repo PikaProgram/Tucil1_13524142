@@ -1,24 +1,32 @@
 package board
 
 func DisplayBoard(b *Board) {
+	println(BoardToString(b))
+}
+
+func BoardToString(b *Board) string {
+	var boardString string
 	for r := 0; r < b.Rows; r++ {
-		PrintHorizontalSeparator(b)
+		boardString += GenerateSeparator(b)
 		for c := 0; c < b.Cols; c++ {
 			cell := b.Cells[r][c]
 			if cell.HasQueen {
-				print("| @ ")
+				boardString += "| @ "
 			} else {
-				print("| " + cell.RegionID + " ")
+				boardString += "| " + cell.RegionID + " "
 			}
 		}
-		println("|")
+		boardString += "|\n"
 	}
-	PrintHorizontalSeparator(b)
+	boardString += GenerateSeparator(b)
+	return boardString
 }
 
-func PrintHorizontalSeparator(b *Board) {
+func GenerateSeparator(b *Board) string {
+	var separator string
 	for range b.Cells[0] {
-		print("+---")
+		separator += "+---"
 	}
-	println("+")
+	separator += "+\n"
+	return separator
 }

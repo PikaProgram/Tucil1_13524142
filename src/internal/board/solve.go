@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -11,12 +12,32 @@ var iterationCount int
 var elapsedTime time.Time
 var lastTime time.Time
 
-func CreateSolvedBoard(b *Board) (*Board, error) {
-	regionIDs := make([]string, 0, len(b.Regions))
-	regions := make([][]*Cell, 0, len(b.Regions))
+var solveStatsKey sync.RWMutex
+
+func GetCurrentSolveStats() (iteration int, elapsed time.Duration) {
+	solveStatsKey.RLock()
+	defer solveStatsKey.RUnlock()
+	return iterationCount, time.Since(elapsedTime)
+}
+
+func ResetSolveStats() {
+	solveStatsKey.Lock()
 	iterationCount = 0
 	elapsedTime = time.Now()
 	lastTime = time.Now()
+	solveStatsKey.Unlock()
+}
+
+func addIteration() {
+	solveStatsKey.Lock()
+	iterationCount++
+	solveStatsKey.Unlock()
+}
+
+func CreateSolvedBoard(b *Board) (*Board, error) {
+	regionIDs := make([]string, 0, len(b.Regions))
+	regions := make([][]*Cell, 0, len(b.Regions))
+	ResetSolveStats()
 
 	for id, cells := range b.Regions {
 		regionIDs = append(regionIDs, id)
@@ -50,15 +71,7 @@ func FindSolutions(b *Board, regs [][]*Cell, idx int, sols []*Cell) bool {
 			cell.HasQueen = true
 		}
 
-		iterationCount++
-
-		if time.Since(lastTime) > 3*time.Second {
-			println("Iteration #" + strconv.FormatInt(int64(iterationCount), 10) + " :")
-			DisplayBoard(b)
-			println("Average Iteration Per Second: " + strconv.FormatFloat(float64(iterationCount)/time.Since(elapsedTime).Seconds(), 'f', 2, 64) + "/s")
-			println()
-			lastTime = time.Now()
-		}
+		addIteration()
 
 		if ValidateBoard(b) == nil {
 			return true

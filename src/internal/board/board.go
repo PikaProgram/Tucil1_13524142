@@ -1,6 +1,9 @@
 package board
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 type Cell struct {
 	Row      int
@@ -18,6 +21,33 @@ type Board struct {
 	RegionCount int
 }
 
+func (b *Board) PlaceQueen(row, col int) {
+	b.Cells[row][col].HasQueen = true
+}
+
+func (b *Board) RemoveQueen(row, col int) {
+	b.Cells[row][col].HasQueen = false
+}
+
+func (b *Board) hasQueen(row, col int) bool {
+	return b.Cells[row][col].HasQueen
+}
+
+func (b *Board) String() string {
+	var sb strings.Builder
+	for r := 0; r < b.Rows; r++ {
+		for c := 0; c < b.Cols; c++ {
+			if b.Cells[r][c].HasQueen {
+				sb.WriteString("#")
+			} else {
+				sb.WriteString(b.Cells[r][c].RegionID)
+			}
+		}
+		sb.WriteString("\n")
+	}
+	return sb.String()
+}
+
 func NewBoard(data [][]string) (*Board, error) {
 	rows := len(data)
 	cols := len(data[0])
@@ -26,9 +56,9 @@ func NewBoard(data [][]string) (*Board, error) {
 		return nil, errors.New("Board data cannot be empty")
 	}
 
-	// if rows != cols {
-	// 	return nil, errors.New("Board must be square (rows must equal columns)")
-	// }
+	if rows != cols {
+		return nil, errors.New("Board must be square (rows must equal columns)")
+	}
 
 	cells := make([][]*Cell, rows)
 	adjacency := make([][][]*Cell, rows)
@@ -47,6 +77,10 @@ func NewBoard(data [][]string) (*Board, error) {
 			regionID := cells[r][c].RegionID
 			regions[regionID] = append(regions[regionID], cells[r][c])
 		}
+	}
+
+	if len(regions) != rows {
+		return nil, errors.New("Number of regions must equal the number of rows/columns")
 	}
 
 	for r := 0; r < rows; r++ {
@@ -92,7 +126,7 @@ func ParseRawBoard(raw string) ([][]string, error) {
 
 	boardData := make([][]string, len(lines))
 	for i, line := range lines {
-		boardData[i] = splitToChars(line)
+		boardData[i] = strings.Split(strings.TrimSpace(line), "")
 	}
 
 	return boardData, nil
@@ -113,12 +147,4 @@ func splitAndTrim(s string) []string {
 		result = append(result, current)
 	}
 	return result
-}
-
-func splitToChars(s string) []string {
-	var chars []string
-	for _, r := range s {
-		chars = append(chars, string(r))
-	}
-	return chars
 }
