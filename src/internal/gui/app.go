@@ -138,45 +138,45 @@ func RunGUI(window *app.Window, appState *GUIState) error {
 				)
 			}
 
-			if queenablesApp.controlWidget.SolveBruteForceBtn.Clicked(gtx) && queenablesApp.appState.Board != nil && queenablesApp.appState.SolveState == solver.SolveStateIdle {
-				queenablesApp.appState.SolveState = solver.SolveStateSolving
-				queenablesApp.appState.SolveProgressChan = make(chan solver.SolveProgress)
+			// if queenablesApp.controlWidget.SolveBruteForceBtn.Clicked(gtx) && queenablesApp.appState.Board != nil && queenablesApp.appState.SolveState == solver.SolveStateIdle {
+			// 	queenablesApp.appState.SolveState = solver.SolveStateSolving
+			// 	queenablesApp.appState.SolveProgressChan = make(chan solver.SolveProgress)
 
-				queenablesApp.boardKey.RLock()
-				boardToSolve := queenablesApp.appState.Board
-				queenablesApp.boardKey.RUnlock()
+			// 	queenablesApp.boardKey.RLock()
+			// 	boardToSolve := queenablesApp.appState.Board
+			// 	queenablesApp.boardKey.RUnlock()
 
-				newProgressChan := make(chan solver.SolveProgress)
+			// 	newProgressChan := make(chan solver.SolveProgress)
 
-				go func(progressChan chan solver.SolveProgress) {
-					for progress := range progressChan {
-						queenablesApp.boardKey.Lock()
-						queenablesApp.appState.Board = progress.Board
-						queenablesApp.boardWidget.SetBoard(progress.Board)
-						queenablesApp.statisticsWidget.UpdateStats(progress.IterationCount, progress.ElapsedTime)
+			// 	go func(progressChan chan solver.SolveProgress) {
+			// 		for progress := range progressChan {
+			// 			queenablesApp.boardKey.Lock()
+			// 			queenablesApp.appState.Board = progress.Board
+			// 			queenablesApp.boardWidget.SetBoard(progress.Board)
+			// 			queenablesApp.statisticsWidget.UpdateStats(progress.IterationCount, progress.ElapsedTime)
 
-						if progress.IsComplete {
-							if progress.Err != nil {
-								queenablesApp.appState.SolveState = solver.SolveStateError
-							} else {
-								queenablesApp.appState.SolveState = solver.SolveStateSolved
-							}
-						} else {
-							queenablesApp.appState.SolveState = solver.SolveStateSolving
-						}
-						queenablesApp.boardKey.Unlock()
+			// 			if progress.IsComplete {
+			// 				if progress.Err != nil {
+			// 					queenablesApp.appState.SolveState = solver.SolveStateError
+			// 				} else {
+			// 					queenablesApp.appState.SolveState = solver.SolveStateSolved
+			// 				}
+			// 			} else {
+			// 				queenablesApp.appState.SolveState = solver.SolveStateSolving
+			// 			}
+			// 			queenablesApp.boardKey.Unlock()
 
-						window.Invalidate()
-					}
-				}(newProgressChan)
+			// 			window.Invalidate()
+			// 		}
+			// 	}(newProgressChan)
 
-				solver.SolveBoardAsync(
-					boardToSolve,
-					newProgressChan,
-					67*time.Millisecond,
-					1,
-				)
-			}
+			// 	solver.SolveBoardAsync(
+			// 		boardToSolve,
+			// 		newProgressChan,
+			// 		67*time.Millisecond,
+			// 		1,
+			// 	)
+			// }
 
 			if queenablesApp.controlWidget.ResetBtn.Clicked(gtx) && queenablesApp.appState.Board != nil && (queenablesApp.appState.SolveState == solver.SolveStateIdle || queenablesApp.appState.SolveState == solver.SolveStateSolved || queenablesApp.appState.SolveState == solver.SolveStateError) {
 				queenablesApp.boardKey.Lock()

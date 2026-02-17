@@ -49,9 +49,6 @@ func SolveBoardAsync(b *board.Board, progressChan chan<- SolveProgress, updateDu
 			case 0:
 				_, err := board.CreateSolvedBoard(b)
 				completed <- err
-			case 1:
-				_, err := board.CreateSolvedBoardBruteForce(b)
-				completed <- err
 			}
 		}()
 
