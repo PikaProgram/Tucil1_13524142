@@ -1,6 +1,8 @@
 package widgets
 
 import (
+	"queenables/src/internal/gui/solver"
+
 	"gioui.org/layout"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -24,35 +26,28 @@ func CreateControlWidget() *ControlWidget {
 	}
 }
 
-func (cw *ControlWidget) Layout(gtx layout.Context, th *material.Theme, solving bool, solved bool, boardExists bool) layout.Dimensions {
+func (cw *ControlWidget) Layout(gtx layout.Context, th *material.Theme, solveState solver.SolveState, boardExists bool) layout.Dimensions {
 	solveTxt := "Solve Board"
-	if solving {
+	switch solveState {
+	case solver.SolveStateSolving:
 		solveTxt = "Solving..."
-	} else if solved {
+	case solver.SolveStateSolved:
 		solveTxt = "Board Solved"
 	}
 
 	return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceStart}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := material.Button(th, &cw.SolveBtn, solveTxt)
-			if solving || solved || !boardExists {
+			if solveState == solver.SolveStateIdle && !boardExists {
 				gtx = gtx.Disabled()
 			}
 			return btn.Layout(gtx)
 		}),
-		// layout.Rigid(layout.Spacer{Height: 8}.Layout),
-		// layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-		// 	btn := material.Button(th, &cw.SolveBruteForceBtn, solveTxt+" (Brute Force)")
-		// 	if solving || solved || !boardExists {
-		// 		gtx = gtx.Disabled()
-		// 	}
-		// 	return btn.Layout(gtx)
-		// }),
 		layout.Rigid(layout.Spacer{Height: 8}.Layout),
 		layout.Rigid(
 			func(gtx layout.Context) layout.Dimensions {
 				btn := material.Button(th, &cw.ResetBtn, "Reset")
-				if solving || !solved {
+				if solveState == solver.SolveStateSolving || !boardExists {
 					gtx = gtx.Disabled()
 				}
 				return btn.Layout(gtx)
@@ -61,18 +56,11 @@ func (cw *ControlWidget) Layout(gtx layout.Context, th *material.Theme, solving 
 		layout.Rigid(layout.Spacer{Height: 8}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := material.Button(th, &cw.SaveFileBtn, "Save Board")
-			if solving || !solved {
+			if solveState == solver.SolveStateSolving || solveState == solver.SolveStateIdle || solveState == solver.SolveStateError {
 				gtx = gtx.Disabled()
 			}
 			return btn.Layout(gtx)
 		}),
 		layout.Rigid(layout.Spacer{Height: 8}.Layout),
-		// layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-		// 	btn := material.Button(th, &cw.SaveImgBtn, "Save Image")
-		// 	if solving || !solved {
-		// 		gtx = gtx.Disabled()
-		// 	}
-		// 	return btn.Layout(gtx)
-		// }),
 	)
 }

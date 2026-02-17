@@ -201,7 +201,7 @@ func RunGUI(window *app.Window, appState *GUIState) error {
 						}),
 						layout.Rigid(layout.Spacer{Height: 12}.Layout),
 						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							return queenablesApp.controlWidget.Layout(gtx, th, queenablesApp.appState.SolveState == solver.SolveStateSolving, queenablesApp.appState.SolveState == solver.SolveStateSolved, queenablesApp.appState.Board != nil)
+							return queenablesApp.controlWidget.Layout(gtx, th, queenablesApp.appState.SolveState, queenablesApp.appState.Board != nil)
 						}),
 						layout.Rigid(layout.Spacer{Height: 12}.Layout),
 						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
