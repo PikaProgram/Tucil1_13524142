@@ -3,7 +3,25 @@ package solver
 import (
 	"queenables/src/internal/board"
 	"time"
+
+	"github.com/huandu/go-clone"
 )
+
+type SolveState int
+
+const (
+	SolveStateIdle = iota
+	SolveStateSolving
+	SolveStateSolved
+	SolveStateError
+)
+
+var SolveStateName = map[SolveState]string{
+	SolveStateIdle:    "Idle",
+	SolveStateSolving: "Solving",
+	SolveStateSolved:  "Solved",
+	SolveStateError:   "Error",
+}
 
 type SolveProgress struct {
 	Board          *board.Board
@@ -11,9 +29,10 @@ type SolveProgress struct {
 	ElapsedTime    time.Duration
 	IsComplete     bool
 	Err            error
+	status         string
 }
 
-func SolveBoardAsync(b *board.Board, progressChan chan<- SolveProgress, updateDuration time.Duration) {
+func SolveBoardAsync(b *board.Board, progressChan chan<- SolveProgress, updateDuration time.Duration, algo int) {
 	if updateDuration <= 0 {
 		updateDuration = 5_000 * time.Millisecond
 	}
@@ -21,11 +40,19 @@ func SolveBoardAsync(b *board.Board, progressChan chan<- SolveProgress, updateDu
 	go func() {
 		defer close(progressChan)
 
+		board.ResetSolveStats()
+
 		completed := make(chan error, 1)
 
 		go func() {
-			_, err := board.CreateSolvedBoard(b)
-			completed <- err
+			switch algo {
+			case 0:
+				_, err := board.CreateSolvedBoard(b)
+				completed <- err
+			case 1:
+				_, err := board.CreateSolvedBoardBruteForce(b)
+				completed <- err
+			}
 		}()
 
 		ticker := time.NewTicker(updateDuration)
@@ -35,25 +62,37 @@ func SolveBoardAsync(b *board.Board, progressChan chan<- SolveProgress, updateDu
 			select {
 			case err := <-completed:
 				iterationCount, elapsed := board.GetCurrentSolveStats()
+				progressBoard := clone.Clone(b).(*board.Board)
 				progressChan <- SolveProgress{
-					Board:          b,
+					Board:          progressBoard,
 					IterationCount: iterationCount,
 					ElapsedTime:    elapsed,
 					IsComplete:     true,
 					Err:            err,
+					status:         "Complete",
 				}
 				if err != nil {
-					println("Error solving board:", err.Error())
+					progressChan <- SolveProgress{
+						Board:          progressBoard,
+						IterationCount: iterationCount,
+						ElapsedTime:    elapsed,
+						IsComplete:     true,
+						Err:            err,
+						status:         "Error",
+					}
+					return
 				}
 				return
 			case <-ticker.C:
 				iterationCount, elapsed := board.GetCurrentSolveStats()
+				progressBoard := clone.Clone(b).(*board.Board)
 				progressChan <- SolveProgress{
-					Board:          nil,
+					Board:          progressBoard,
 					IterationCount: iterationCount,
 					ElapsedTime:    elapsed,
 					IsComplete:     false,
 					Err:            nil,
+					status:         "Solving",
 				}
 			}
 		}

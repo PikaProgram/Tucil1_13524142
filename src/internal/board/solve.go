@@ -3,7 +3,6 @@ package board
 import (
 	"errors"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -49,13 +48,9 @@ func CreateSolvedBoard(b *Board) (*Board, error) {
 	sols := make([]*Cell, len(regions))
 
 	if FindSolutions(b, regions, 0, sols) {
-		println("Finished " + strconv.FormatInt(int64(iterationCount), 10) + " iterations.")
-		println("Total Time Elapsed: " + time.Since(elapsedTime).String())
 		return b, nil
 	}
 
-	println("Finished " + strconv.FormatInt(int64(iterationCount), 10) + " iterations.")
-	println("Total Time Elapsed: " + time.Since(elapsedTime).String())
 	return nil, errors.New("No Solution Found")
 }
 
@@ -86,5 +81,45 @@ func FindSolutions(b *Board, regs [][]*Cell, idx int, sols []*Cell) bool {
 		}
 	}
 
+	return false
+}
+
+func CreateSolvedBoardBruteForce(b *Board) (*Board, error) {
+	ResetSolveStats()
+
+	queenPositions := make([][]bool, 0)
+	for r := 0; r < b.Rows; r++ {
+		row := make([]bool, b.Cols)
+		queenPositions = append(queenPositions, row)
+	}
+
+	if FindSolutionsBruteForce(b, queenPositions, 0) {
+		return b, nil
+	}
+	return nil, errors.New("No Solution Found")
+}
+
+func FindSolutionsBruteForce(b *Board, queenPositions [][]bool, row int) bool {
+	if row == b.Rows {
+		for r := 0; r < b.Rows; r++ {
+			for c := 0; c < b.Cols; c++ {
+				b.Cells[r][c].HasQueen = queenPositions[r][c]
+			}
+		}
+
+		addIteration()
+		if ValidateBoard(b) == nil {
+			return true
+		}
+		return false
+	}
+
+	for c := 0; c < b.Cols; c++ {
+		queenPositions[row][c] = true
+		if FindSolutionsBruteForce(b, queenPositions, row+1) {
+			return true
+		}
+		queenPositions[row][c] = false
+	}
 	return false
 }

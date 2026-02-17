@@ -23,7 +23,7 @@ func CreateBoardWidget(board *board.Board) *BoardWidget {
 	regionColors := GenerateRegionColors(strings.Split("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", ""))
 	return &BoardWidget{
 		board:        board,
-		cellSize:     32,
+		cellSize:     48,
 		borderSize:   2,
 		regionColors: regionColors,
 	}
@@ -36,6 +36,17 @@ func (bw *BoardWidget) SetBoard(board *board.Board) {
 func (bw *BoardWidget) Layout(gtx layout.Context) layout.Dimensions {
 	if bw.board == nil {
 		return layout.Dimensions{}
+	}
+
+	if bw.board.Rows > 0 || bw.board.Cols > 0 {
+		mW := int32(bw.board.Cols) * bw.cellSize
+		mH := int32(bw.board.Rows) * bw.cellSize
+		if mW > 0 && mH > 0 {
+			cW := int32(mW / int32(bw.board.Cols))
+			cH := int32(mH / int32(bw.board.Rows))
+			cellSize := max(min(cW, cH), 16)
+			bw.cellSize = cellSize
+		}
 	}
 
 	boardWidth := int32(bw.board.Cols) * bw.cellSize
@@ -190,13 +201,15 @@ func (bw *BoardWidget) drawLine(gtx layout.Context, p1, p2 image.Point, c color.
 
 func GenerateRegionColors(alphabet []string) map[string]color.NRGBA {
 	regionColors := make(map[string]color.NRGBA)
+	hashSeed := 6769420
 	for i, regionID := range alphabet {
 		regionColors[regionID] = color.NRGBA{
-			R: uint8((i * 6769420) % 256),
-			G: uint8((i * 6769420 / 256) % 256),
-			B: uint8((i * 6769420 / 65536) % 256),
+			R: uint8((i * hashSeed) % 256),
+			G: uint8((i * hashSeed / 256) % 256),
+			B: uint8((i * hashSeed / 65536) % 256),
 			A: 255,
 		}
+		hashSeed += hashSeed * i % 0xFFFFFF
 	}
 	return regionColors
 }

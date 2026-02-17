@@ -5,11 +5,13 @@ import (
 	"queenables/src/internal/gui/solver"
 	"queenables/src/internal/gui/widgets"
 	"queenables/src/internal/io"
+	"sync"
 	"time"
 
 	"gioui.org/app"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"gioui.org/widget/material"
 	"github.com/ncruces/zenity"
 )
@@ -20,7 +22,7 @@ type App struct {
 	inputWidget      *widgets.InputWidget
 	controlWidget    *widgets.ControlWidget
 	statisticsWidget *widgets.StatisticsWidget
-	mainLayout       layout.Widget
+	boardKey         sync.RWMutex
 }
 
 func RunGUI(window *app.Window, appState *GUIState) error {
@@ -33,6 +35,7 @@ func RunGUI(window *app.Window, appState *GUIState) error {
 		inputWidget:      widgets.CreateInputWidget(),
 		controlWidget:    widgets.CreateControlWidget(),
 		statisticsWidget: widgets.CreateStatisticsWidget(),
+		boardKey:         sync.RWMutex{},
 	}
 
 	for {
@@ -41,19 +44,21 @@ func RunGUI(window *app.Window, appState *GUIState) error {
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
 
-			if queenablesApp.inputWidget.SubmitBtn.Clicked(gtx) {
+			if queenablesApp.inputWidget.SubmitBtn.Clicked(gtx) && queenablesApp.appState.Board == nil {
 				editorText := queenablesApp.inputWidget.Editor.Text()
 				rawBoardData, err := board.ParseRawBoard(editorText)
 				if err == nil {
 					newBoard, err := board.NewBoard(rawBoardData)
 					if err == nil {
+						queenablesApp.boardKey.Lock()
 						queenablesApp.appState.Board = newBoard
 						queenablesApp.boardWidget.SetBoard(newBoard)
+						queenablesApp.boardKey.Unlock()
 					}
 				}
 			}
 
-			if queenablesApp.inputWidget.LoadFileBtn.Clicked(gtx) {
+			if queenablesApp.inputWidget.LoadFileBtn.Clicked(gtx) && queenablesApp.appState.Board == nil {
 				go func() {
 					filename, err := zenity.SelectFile(
 						zenity.Title("Load Board File"),
@@ -75,7 +80,7 @@ func RunGUI(window *app.Window, appState *GUIState) error {
 				}()
 			}
 
-			if queenablesApp.controlWidget.SaveFileBtn.Clicked(gtx) && queenablesApp.appState.Board != nil {
+			if queenablesApp.controlWidget.SaveFileBtn.Clicked(gtx) && queenablesApp.appState.Board != nil && queenablesApp.appState.SolveState == solver.SolveStateSolved {
 				go func() {
 					filename, err := zenity.SelectFileSave(
 						zenity.Title("Save Board File"),
@@ -93,35 +98,128 @@ func RunGUI(window *app.Window, appState *GUIState) error {
 				}()
 			}
 
-			if queenablesApp.controlWidget.SolveBtn.Clicked(gtx) && queenablesApp.appState.Board != nil {
-				queenablesApp.appState.SolveState = SolveStateSolving
+			if queenablesApp.controlWidget.SolveBtn.Clicked(gtx) && queenablesApp.appState.Board != nil && queenablesApp.appState.SolveState == solver.SolveStateIdle {
+				queenablesApp.appState.SolveState = solver.SolveStateSolving
+				queenablesApp.appState.SolveProgressChan = make(chan solver.SolveProgress)
+
+				queenablesApp.boardKey.RLock()
+				boardToSolve := queenablesApp.appState.Board
+				queenablesApp.boardKey.RUnlock()
+
+				newProgressChan := make(chan solver.SolveProgress)
+
+				go func(progressChan chan solver.SolveProgress) {
+					for progress := range progressChan {
+						queenablesApp.boardKey.Lock()
+						queenablesApp.appState.Board = progress.Board
+						queenablesApp.boardWidget.SetBoard(progress.Board)
+						queenablesApp.statisticsWidget.UpdateStats(progress.IterationCount, progress.ElapsedTime)
+
+						if progress.IsComplete {
+							if progress.Err != nil {
+								queenablesApp.appState.SolveState = solver.SolveStateError
+							} else {
+								queenablesApp.appState.SolveState = solver.SolveStateSolved
+							}
+						} else {
+							queenablesApp.appState.SolveState = solver.SolveStateSolving
+						}
+						queenablesApp.boardKey.Unlock()
+
+						window.Invalidate()
+					}
+				}(newProgressChan)
+
 				solver.SolveBoardAsync(
-					queenablesApp.appState.Board,
-					queenablesApp.appState.SolveProgressChan,
-					300*time.Millisecond,
+					boardToSolve,
+					newProgressChan,
+					67*time.Millisecond,
+					0,
 				)
+			}
+
+			if queenablesApp.controlWidget.SolveBruteForceBtn.Clicked(gtx) && queenablesApp.appState.Board != nil && queenablesApp.appState.SolveState == solver.SolveStateIdle {
+				queenablesApp.appState.SolveState = solver.SolveStateSolving
+				queenablesApp.appState.SolveProgressChan = make(chan solver.SolveProgress)
+
+				queenablesApp.boardKey.RLock()
+				boardToSolve := queenablesApp.appState.Board
+				queenablesApp.boardKey.RUnlock()
+
+				newProgressChan := make(chan solver.SolveProgress)
+
+				go func(progressChan chan solver.SolveProgress) {
+					for progress := range progressChan {
+						queenablesApp.boardKey.Lock()
+						queenablesApp.appState.Board = progress.Board
+						queenablesApp.boardWidget.SetBoard(progress.Board)
+						queenablesApp.statisticsWidget.UpdateStats(progress.IterationCount, progress.ElapsedTime)
+
+						if progress.IsComplete {
+							if progress.Err != nil {
+								queenablesApp.appState.SolveState = solver.SolveStateError
+							} else {
+								queenablesApp.appState.SolveState = solver.SolveStateSolved
+							}
+						} else {
+							queenablesApp.appState.SolveState = solver.SolveStateSolving
+						}
+						queenablesApp.boardKey.Unlock()
+
+						window.Invalidate()
+					}
+				}(newProgressChan)
+
+				solver.SolveBoardAsync(
+					boardToSolve,
+					newProgressChan,
+					67*time.Millisecond,
+					1,
+				)
+			}
+
+			if queenablesApp.controlWidget.ResetBtn.Clicked(gtx) && queenablesApp.appState.Board != nil && (queenablesApp.appState.SolveState == solver.SolveStateIdle || queenablesApp.appState.SolveState == solver.SolveStateSolved || queenablesApp.appState.SolveState == solver.SolveStateError) {
+				queenablesApp.boardKey.Lock()
+				queenablesApp.appState.Board = nil
+				queenablesApp.boardWidget.SetBoard(nil)
+				queenablesApp.appState.SolveState = solver.SolveStateIdle
+				queenablesApp.boardKey.Unlock()
 			}
 
 			layout.Flex{
 				Axis: layout.Horizontal,
 			}.Layout(gtx,
+				layout.Rigid(layout.Spacer{Width: 32}.Layout),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					gtx.Constraints.Max.X = gtx.Dp(200)
-					return queenablesApp.inputWidget.Layout(gtx, th)
+					sidebarWidth := gtx.Dp(unit.Dp(240))
+					gtx.Constraints.Min.X = sidebarWidth
+					gtx.Constraints.Max.X = sidebarWidth
 
+					return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return queenablesApp.inputWidget.Layout(gtx, th, queenablesApp.appState.Board != nil)
+						}),
+						layout.Rigid(layout.Spacer{Height: 12}.Layout),
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							return queenablesApp.controlWidget.Layout(gtx, th, queenablesApp.appState.SolveState == solver.SolveStateSolving, queenablesApp.appState.SolveState == solver.SolveStateSolved, queenablesApp.appState.Board != nil)
+						}),
+						layout.Rigid(layout.Spacer{Height: 12}.Layout),
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+							if queenablesApp.appState.Board == nil {
+								return layout.Dimensions{}
+							}
+
+							return queenablesApp.statisticsWidget.Layout(gtx, th, queenablesApp.appState.SolveState)
+						}),
+					)
 				}),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						if queenablesApp.boardWidget != nil {
-							return queenablesApp.boardWidget.Layout(gtx)
+						if queenablesApp.appState.Board == nil {
+							return layout.Dimensions{}
 						}
-						return layout.Dimensions{}
+						return queenablesApp.boardWidget.Layout(gtx)
 					})
-				}),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					solvingBoard := queenablesApp.appState.SolveState == SolveStateSolving
-					solved := queenablesApp.appState.SolveState == SolveStateSolved
-					return queenablesApp.controlWidget.Layout(gtx, th, solvingBoard, solved)
 				}),
 			)
 
@@ -135,7 +233,7 @@ func RunGUI(window *app.Window, appState *GUIState) error {
 func StartGUI() {
 	appState := &GUIState{
 		Board:             nil,
-		SolveState:        SolveStateIdle,
+		SolveState:        solver.SolveStateIdle,
 		SolveProgressChan: make(chan solver.SolveProgress),
 	}
 

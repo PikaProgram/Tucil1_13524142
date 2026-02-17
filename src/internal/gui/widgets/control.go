@@ -7,31 +7,43 @@ import (
 )
 
 type ControlWidget struct {
-	SolveBtn    widget.Clickable
-	ResetBtn    widget.Clickable
-	SaveFileBtn widget.Clickable
-	SaveImgBtn  widget.Clickable
+	SolveBtn           widget.Clickable
+	SolveBruteForceBtn widget.Clickable
+	ResetBtn           widget.Clickable
+	SaveFileBtn        widget.Clickable
+	SaveImgBtn         widget.Clickable
 }
 
 func CreateControlWidget() *ControlWidget {
 	return &ControlWidget{
-		SolveBtn:    widget.Clickable{},
-		ResetBtn:    widget.Clickable{},
-		SaveFileBtn: widget.Clickable{},
-		SaveImgBtn:  widget.Clickable{},
+		SolveBtn:           widget.Clickable{},
+		SolveBruteForceBtn: widget.Clickable{},
+		ResetBtn:           widget.Clickable{},
+		SaveFileBtn:        widget.Clickable{},
+		SaveImgBtn:         widget.Clickable{},
 	}
 }
 
-func (cw *ControlWidget) Layout(gtx layout.Context, th *material.Theme, solving bool, solved bool) layout.Dimensions {
+func (cw *ControlWidget) Layout(gtx layout.Context, th *material.Theme, solving bool, solved bool, boardExists bool) layout.Dimensions {
 	solveTxt := "Solve Board"
 	if solving {
 		solveTxt = "Solving..."
+	} else if solved {
+		solveTxt = "Board Solved"
 	}
 
 	return layout.Flex{Axis: layout.Vertical, Spacing: layout.SpaceStart}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := material.Button(th, &cw.SolveBtn, solveTxt)
-			if solving {
+			if solving || solved || !boardExists {
+				gtx = gtx.Disabled()
+			}
+			return btn.Layout(gtx)
+		}),
+		layout.Rigid(layout.Spacer{Height: 8}.Layout),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := material.Button(th, &cw.SolveBruteForceBtn, solveTxt+" (Brute Force)")
+			if solving || solved || !boardExists {
 				gtx = gtx.Disabled()
 			}
 			return btn.Layout(gtx)
@@ -40,12 +52,13 @@ func (cw *ControlWidget) Layout(gtx layout.Context, th *material.Theme, solving 
 		layout.Rigid(
 			func(gtx layout.Context) layout.Dimensions {
 				btn := material.Button(th, &cw.ResetBtn, "Reset")
-				if solving {
+				if solving || !solved {
 					gtx = gtx.Disabled()
 				}
 				return btn.Layout(gtx)
 			},
 		),
+		layout.Rigid(layout.Spacer{Height: 8}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			btn := material.Button(th, &cw.SaveFileBtn, "Save Board")
 			if solving || !solved {
@@ -54,12 +67,12 @@ func (cw *ControlWidget) Layout(gtx layout.Context, th *material.Theme, solving 
 			return btn.Layout(gtx)
 		}),
 		layout.Rigid(layout.Spacer{Height: 8}.Layout),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := material.Button(th, &cw.SaveImgBtn, "Save Image")
-			if solving || !solved {
-				gtx = gtx.Disabled()
-			}
-			return btn.Layout(gtx)
-		}),
+		// layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		// 	btn := material.Button(th, &cw.SaveImgBtn, "Save Image")
+		// 	if solving || !solved {
+		// 		gtx = gtx.Disabled()
+		// 	}
+		// 	return btn.Layout(gtx)
+		// }),
 	)
 }
