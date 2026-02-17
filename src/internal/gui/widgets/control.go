@@ -40,14 +40,14 @@ func (cw *ControlWidget) Layout(gtx layout.Context, th *material.Theme, solving 
 			}
 			return btn.Layout(gtx)
 		}),
-		layout.Rigid(layout.Spacer{Height: 8}.Layout),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := material.Button(th, &cw.SolveBruteForceBtn, solveTxt+" (Brute Force)")
-			if solving || solved || !boardExists {
-				gtx = gtx.Disabled()
-			}
-			return btn.Layout(gtx)
-		}),
+		// layout.Rigid(layout.Spacer{Height: 8}.Layout),
+		// layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		// 	btn := material.Button(th, &cw.SolveBruteForceBtn, solveTxt+" (Brute Force)")
+		// 	if solving || solved || !boardExists {
+		// 		gtx = gtx.Disabled()
+		// 	}
+		// 	return btn.Layout(gtx)
+		// }),
 		layout.Rigid(layout.Spacer{Height: 8}.Layout),
 		layout.Rigid(
 			func(gtx layout.Context) layout.Dimensions {
